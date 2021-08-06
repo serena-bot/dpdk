@@ -13,7 +13,7 @@ jobs:
   build:
     # Here, runners for arm64 will not be available by fork.
     # you can change the following 'if' and 'runs-on' if you have your own runners installed.
-    if: ${{ github.repository_owner == 'DPDK' }}
+    # if: ${{ github.repository_owner == 'DPDK' }}
     name: ${{ join(matrix.config.*, '-') }}
     runs-on: ${{ matrix.config.os }}
     env:
