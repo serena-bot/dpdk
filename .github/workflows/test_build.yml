@@ -13,7 +13,7 @@ jobs:
   build:
     # Here, runners for arm64 will not be available by fork.
     # you can change the following 'if' and 'runs-on' if you have your own runners installed.
-    # if: ${{ github.repository_owner == 'DPDK' }}
+    # if: ${{ github.repository_owner == 'DPDK' || github.repository == 'ovsrobot/dpdk' }}
     name: ${{ join(matrix.config.*, '-') }}
     runs-on: ${{ matrix.config.os }}
     env:
@@ -23,19 +23,19 @@ jobs:
       CC: ccache ${{ matrix.config.compiler }}
       DEF_LIB: ${{ matrix.config.library }}
       LIBABIGAIL_VERSION: libabigail-1.8
-      REF_GIT_TAG: v21.05
+      REF_GIT_TAG: none
 
     strategy:
       fail-fast: false
       matrix:
         config:
-          - os: [self-hosted,arm-ubuntu-18.04]
+          - os: [self-hosted,arm-ubuntu-20.04]
             compiler: gcc
             library: static
           - os: [self-hosted,arm-ubuntu-20.04]
             compiler: gcc
             library: shared
-            checks: abi+doc+tests
+            checks: doc+tests
           - os: [self-hosted,arm-ubuntu-20.04]
             compiler: clang
             library: static
@@ -81,7 +81,8 @@ jobs:
     - name: Install packages
       run: sudo apt install -y ccache libnuma-dev python3-setuptools
         python3-wheel python3-pip python3-pyelftools ninja-build libbsd-dev
-        libpcap-dev libibverbs-dev libcrypto++-dev libfdt-dev libjansson-dev zlib1g-dev pkgconf
+        libpcap-dev libibverbs-dev libcrypto++-dev libfdt-dev libjansson-dev
+        libarchive-dev zlib1g-dev pkgconf
     - name: Install libabigail build dependencies if no cache is available
       if: env.ABI_CHECKS == 'true' && steps.libabigail-cache.outputs.cache-hit != 'true'
       run: sudo apt install -y autoconf automake libtool pkg-config libxml2-dev
