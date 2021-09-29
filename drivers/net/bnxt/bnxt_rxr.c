@@ -272,7 +272,7 @@ static void bnxt_tpa_start(struct bnxt_rx_queue *rxq,
 		mbuf->ol_flags |= PKT_RX_FDIR | PKT_RX_FDIR_ID;
 	}
 
-	if (tpa_info->vlan_valid) {
+	if (tpa_info->vlan_valid && BNXT_RX_VLAN_STRIP_EN(rxq->bp)) {
 		mbuf->vlan_tci = tpa_info->vlan;
 		mbuf->ol_flags |= PKT_RX_VLAN | PKT_RX_VLAN_STRIPPED;
 	}
@@ -574,8 +574,10 @@ bnxt_init_ol_flags_tables(struct bnxt_rx_queue *rxq)
 	for (i = 0; i < BNXT_OL_FLAGS_TBL_DIM; i++) {
 		pt[i] = 0;
 
-		if (i & RX_PKT_CMPL_FLAGS2_META_FORMAT_VLAN)
-			pt[i] |= PKT_RX_VLAN | PKT_RX_VLAN_STRIPPED;
+		if (BNXT_RX_VLAN_STRIP_EN(rxq->bp)) {
+			if (i & RX_PKT_CMPL_FLAGS2_META_FORMAT_VLAN)
+				pt[i] |= PKT_RX_VLAN | PKT_RX_VLAN_STRIPPED;
+		}
 
 		if (i & (RX_PKT_CMPL_FLAGS2_T_IP_CS_CALC << 3)) {
 			/* Tunnel case. */
@@ -961,6 +963,8 @@ static int bnxt_rx_pkt(struct rte_mbuf **rx_pkt,
 	bnxt_set_ol_flags(rxr, rxcmp, rxcmp1, mbuf);
 
 	mbuf->packet_type = bnxt_parse_pkt_type(rxcmp, rxcmp1);
+
+	bnxt_set_vlan(rxcmp1, mbuf);
 
 	if (BNXT_TRUFLOW_EN(bp))
 		mark_id = bnxt_ulp_set_mark_in_mbuf(rxq->bp, rxcmp1, mbuf,
@@ -1378,6 +1382,9 @@ int bnxt_init_one_rx_ring(struct bnxt_rx_queue *rxq)
 		}
 	}
 	PMD_DRV_LOG(DEBUG, "TPA alloc Done!\n");
+
+	/* Explicitly reset this driver internal tracker on a ring init */
+	rxr->rx_next_cons = 0;
 
 	return 0;
 }

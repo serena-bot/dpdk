@@ -9267,6 +9267,8 @@ flow_dv_translate_item_geneve_opt(struct rte_eth_dev *dev, void *matcher,
 		MLX5_SET(fte_match_set_misc, misc_v, geneve_opt_len,
 			 geneve_opt_v->option_len + 1);
 	}
+	MLX5_SET(fte_match_set_misc, misc_m, geneve_tlv_option_0_exist, 1);
+	MLX5_SET(fte_match_set_misc, misc_v, geneve_tlv_option_0_exist, 1);
 	/* Set the data. */
 	if (geneve_opt_v->data) {
 		memcpy(&opt_data_key, geneve_opt_v->data,
@@ -9976,12 +9978,13 @@ flow_dv_translate_item_gtp_psc(void *matcher, void *key,
  *   Flow matcher value.
  * @param[in] item
  *   Flow pattern to translate.
- * @param[in] samples
- *   Sample IDs to be used in the matching.
+ * @param[in] last_item
+ *   Last item flags.
  */
 static void
 flow_dv_translate_item_ecpri(struct rte_eth_dev *dev, void *matcher,
-			     void *key, const struct rte_flow_item *item)
+			     void *key, const struct rte_flow_item *item,
+			     uint64_t last_item)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	const struct rte_flow_item_ecpri *ecpri_m = item->mask;
@@ -9994,6 +9997,22 @@ flow_dv_translate_item_ecpri(struct rte_eth_dev *dev, void *matcher,
 	void *dw_m;
 	void *dw_v;
 
+	/*
+	 * In case of eCPRI over Ethernet, if EtherType is not specified,
+	 * match on eCPRI EtherType implicitly.
+	 */
+	if (last_item & MLX5_FLOW_LAYER_OUTER_L2) {
+		void *hdrs_m, *hdrs_v, *l2m, *l2v;
+
+		hdrs_m = MLX5_ADDR_OF(fte_match_param, matcher, outer_headers);
+		hdrs_v = MLX5_ADDR_OF(fte_match_param, key, outer_headers);
+		l2m = MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_m, ethertype);
+		l2v = MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_v, ethertype);
+		if (*(uint16_t *)l2m == 0 && *(uint16_t *)l2v == 0) {
+			*(uint16_t *)l2m = UINT16_MAX;
+			*(uint16_t *)l2v = RTE_BE16(RTE_ETHER_TYPE_ECPRI);
+		}
+	}
 	if (!ecpri_v)
 		return;
 	if (!ecpri_m)
@@ -13474,7 +13493,8 @@ flow_dv_translate(struct rte_eth_dev *dev,
 						"cannot create eCPRI parser");
 			}
 			flow_dv_translate_item_ecpri(dev, match_mask,
-						     match_value, items);
+						     match_value, items,
+						     last_item);
 			/* No other protocol should follow eCPRI layer. */
 			last_item = MLX5_FLOW_LAYER_ECPRI;
 			break;

@@ -977,13 +977,8 @@ eth_igbvf_dev_init(struct rte_eth_dev *eth_dev)
 		rte_eth_random_addr(perm_addr->addr_bytes);
 		PMD_INIT_LOG(INFO, "\tVF MAC address not assigned by Host PF");
 		PMD_INIT_LOG(INFO, "\tAssign randomly generated MAC address "
-			     "%02x:%02x:%02x:%02x:%02x:%02x",
-			     perm_addr->addr_bytes[0],
-			     perm_addr->addr_bytes[1],
-			     perm_addr->addr_bytes[2],
-			     perm_addr->addr_bytes[3],
-			     perm_addr->addr_bytes[4],
-			     perm_addr->addr_bytes[5]);
+			     RTE_ETHER_ADDR_PRT_FMT,
+			     RTE_ETHER_ADDR_BYTES(perm_addr));
 	}
 
 	diag = e1000_rar_set(hw, perm_addr->addr_bytes, 0);

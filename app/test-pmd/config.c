@@ -782,10 +782,8 @@ port_summary_display(portid_t port_id)
 	if (ret != 0)
 		return;
 
-	printf("%-4d %02X:%02X:%02X:%02X:%02X:%02X %-12s %-14s %-8s %s\n",
-		port_id, mac_addr.addr_bytes[0], mac_addr.addr_bytes[1],
-		mac_addr.addr_bytes[2], mac_addr.addr_bytes[3],
-		mac_addr.addr_bytes[4], mac_addr.addr_bytes[5], name,
+	printf("%-4d " RTE_ETHER_ADDR_PRT_FMT " %-12s %-14s %-8s %s\n",
+		port_id, RTE_ETHER_ADDR_BYTES(&mac_addr), name,
 		dev_info.driver_name, (link.link_status) ? ("up") : ("down"),
 		rte_eth_link_speed_to_str(link.link_speed));
 }
@@ -2998,6 +2996,8 @@ rss_fwd_config_setup(void)
 	queueid_t  rxq;
 	queueid_t  nb_q;
 	streamid_t  sm_id;
+	int start;
+	int end;
 
 	nb_q = nb_rxq;
 	if (nb_q > nb_txq)
@@ -3015,7 +3015,21 @@ rss_fwd_config_setup(void)
 	init_fwd_streams();
 
 	setup_fwd_config_of_each_lcore(&cur_fwd_config);
-	rxp = 0; rxq = 0;
+
+	if (proc_id > 0 && nb_q % num_procs != 0)
+		printf("Warning! queue numbers should be multiple of processes, or packet loss will happen.\n");
+
+	/**
+	 * In multi-process, All queues are allocated to different
+	 * processes based on num_procs and proc_id. For example:
+	 * if supports 4 queues(nb_q), 2 processes(num_procs),
+	 * the 0~1 queue for primary process.
+	 * the 2~3 queue for secondary process.
+	 */
+	start = proc_id * nb_q / num_procs;
+	end = start + nb_q / num_procs;
+	rxp = 0;
+	rxq = start;
 	for (sm_id = 0; sm_id < cur_fwd_config.nb_fwd_streams; sm_id++) {
 		struct fwd_stream *fs;
 
@@ -3032,6 +3046,8 @@ rss_fwd_config_setup(void)
 			continue;
 		rxp = 0;
 		rxq++;
+		if (rxq >= end)
+			rxq = start;
 	}
 }
 

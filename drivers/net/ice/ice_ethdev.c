@@ -2139,20 +2139,26 @@ ice_dev_init(struct rte_eth_dev *dev)
 		ret = ice_flow_init(ad);
 		if (ret) {
 			PMD_INIT_LOG(ERR, "Failed to initialize flow");
-			return ret;
+			goto err_flow_init;
 		}
 	}
 
 	ret = ice_reset_fxp_resource(hw);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "Failed to reset fxp resource");
-		return ret;
+		goto err_flow_init;
 	}
 
 	pf->supported_rxdid = ice_get_supported_rxdid(hw);
 
 	return 0;
 
+err_flow_init:
+	ice_flow_uninit(ad);
+	rte_intr_disable(intr_handle);
+	ice_pf_disable_irq0(hw);
+	rte_intr_callback_unregister(intr_handle,
+				     ice_interrupt_handler, dev);
 err_pf_setup:
 	ice_res_pool_destroy(&pf->msix_pool);
 err_msix_pool_init:
@@ -2975,7 +2981,7 @@ ice_rss_hash_set(struct ice_pf *pf, uint64_t rss_hf)
 
 	if (rss_hf & ETH_RSS_FRAG_IPV4) {
 		cfg.addl_hdrs = ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV_FRAG;
-		cfg.hash_flds = ICE_FLOW_HASH_IPV4 | BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_ID);
+		cfg.hash_flds = ICE_FLOW_HASH_IPV4;
 		ret = ice_add_rss_cfg_wrap(pf, vsi->idx, &cfg);
 		if (ret)
 			PMD_DRV_LOG(ERR, "%s IPV4_FRAG rss flow fail %d",
@@ -2984,7 +2990,7 @@ ice_rss_hash_set(struct ice_pf *pf, uint64_t rss_hf)
 
 	if (rss_hf & ETH_RSS_FRAG_IPV6) {
 		cfg.addl_hdrs = ICE_FLOW_SEG_HDR_IPV6 | ICE_FLOW_SEG_HDR_IPV_FRAG;
-		cfg.hash_flds = ICE_FLOW_HASH_IPV6 | BIT_ULL(ICE_FLOW_FIELD_IDX_IPV6_ID);
+		cfg.hash_flds = ICE_FLOW_HASH_IPV6;
 		ret = ice_add_rss_cfg_wrap(pf, vsi->idx, &cfg);
 		if (ret)
 			PMD_DRV_LOG(ERR, "%s IPV6_FRAG rss flow fail %d",

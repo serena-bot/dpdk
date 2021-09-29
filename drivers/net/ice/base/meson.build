@@ -14,6 +14,7 @@ sources = [
         'ice_acl.c',
         'ice_acl_ctrl.c',
         'ice_vlan_mode.c',
+        'ice_ptp_hw.c',
 ]
 
 error_cflags = [
@@ -43,4 +44,4 @@ endforeach
 base_lib = static_library('ice_base', sources,
         dependencies: static_rte_eal,
         c_args: c_args)
-base_objs = base_lib.extract_all_objects()
+base_objs = base_lib.extract_all_objects(recursive: true)

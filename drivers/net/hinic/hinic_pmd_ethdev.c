@@ -2359,10 +2359,8 @@ static int hinic_set_mac_addr(struct rte_eth_dev *dev,
 
 	rte_ether_addr_copy(addr, &nic_dev->default_addr);
 
-	PMD_DRV_LOG(INFO, "Set new mac address %02x:%02x:%02x:%02x:%02x:%02x",
-		    addr->addr_bytes[0], addr->addr_bytes[1],
-		    addr->addr_bytes[2], addr->addr_bytes[3],
-		    addr->addr_bytes[4], addr->addr_bytes[5]);
+	PMD_DRV_LOG(INFO, "Set new mac address " RTE_ETHER_ADDR_PRT_FMT,
+		    RTE_ETHER_ADDR_BYTES(addr));
 
 	return 0;
 }

@@ -941,6 +941,10 @@ static int __bnxt_hwrm_func_qcaps(struct bnxt *bp)
 	if (flags & HWRM_FUNC_QCAPS_OUTPUT_FLAGS_LINK_ADMIN_STATUS_SUPPORTED)
 		bp->fw_cap |= BNXT_FW_CAP_LINK_ADMIN;
 
+	if (!(flags & HWRM_FUNC_QCAPS_OUTPUT_FLAGS_VLAN_ACCELERATION_TX_DISABLED)) {
+		bp->fw_cap |= BNXT_FW_CAP_VLAN_TX_INSERT;
+		PMD_DRV_LOG(DEBUG, "VLAN acceleration for TX is enabled\n");
+	}
 unlock:
 	HWRM_UNLOCK();
 
@@ -1000,6 +1004,11 @@ int bnxt_hwrm_vnic_qcaps(struct bnxt *bp)
 
 	if (flags & HWRM_VNIC_QCAPS_OUTPUT_FLAGS_RX_CMPL_V2_CAP)
 		bp->vnic_cap_flags |= BNXT_VNIC_CAP_RX_CMPL_V2;
+
+	if (flags & HWRM_VNIC_QCAPS_OUTPUT_FLAGS_VLAN_STRIP_CAP) {
+		bp->vnic_cap_flags |= BNXT_VNIC_CAP_VLAN_RX_STRIP;
+		PMD_DRV_LOG(DEBUG, "Rx VLAN strip capability enabled\n");
+	}
 
 	bp->max_tpa_v2 = rte_le_to_cpu_16(resp->max_aggs_supported);
 
@@ -1864,6 +1873,10 @@ int bnxt_hwrm_ring_grp_alloc(struct bnxt *bp, unsigned int idx)
 	struct hwrm_ring_grp_alloc_input req = {.req_type = 0 };
 	struct hwrm_ring_grp_alloc_output *resp = bp->hwrm_cmd_resp_addr;
 
+	/* Don't attempt to re-create the ring group if it is already created */
+	if (bp->grp_info[idx].fw_grp_id != INVALID_HW_RING_ID)
+		return 0;
+
 	HWRM_PREP(&req, HWRM_RING_GRP_ALLOC, BNXT_USE_CHIMP_MB);
 
 	req.cr = rte_cpu_to_le_16(bp->grp_info[idx].cp_fw_ring_id);
@@ -1887,6 +1900,9 @@ int bnxt_hwrm_ring_grp_free(struct bnxt *bp, unsigned int idx)
 	int rc;
 	struct hwrm_ring_grp_free_input req = {.req_type = 0 };
 	struct hwrm_ring_grp_free_output *resp = bp->hwrm_cmd_resp_addr;
+
+	if (bp->grp_info[idx].fw_grp_id == INVALID_HW_RING_ID)
+		return 0;
 
 	HWRM_PREP(&req, HWRM_RING_GRP_FREE, BNXT_USE_CHIMP_MB);
 
@@ -2716,6 +2732,9 @@ void bnxt_free_hwrm_rx_ring(struct bnxt *bp, int queue_index)
 	struct bnxt_rx_ring_info *rxr = rxq->rx_ring;
 	struct bnxt_ring *ring = rxr->rx_ring_struct;
 	struct bnxt_cp_ring_info *cpr = rxq->cp_ring;
+
+	if (BNXT_HAS_RING_GRPS(bp))
+		bnxt_hwrm_ring_grp_free(bp, queue_index);
 
 	bnxt_hwrm_ring_free(bp, ring,
 			    HWRM_RING_FREE_INPUT_RING_TYPE_RX,
@@ -5075,6 +5094,7 @@ static int
 bnxt_vnic_rss_configure_p5(struct bnxt *bp, struct bnxt_vnic_info *vnic)
 {
 	struct hwrm_vnic_rss_cfg_output *resp = bp->hwrm_cmd_resp_addr;
+	uint8_t *rxq_state = bp->eth_dev->data->rx_queue_state;
 	struct hwrm_vnic_rss_cfg_input req = {.req_type = 0 };
 	struct bnxt_rx_queue **rxqs = bp->rx_queues;
 	uint16_t *ring_tbl = vnic->rss_table;
@@ -5108,7 +5128,7 @@ bnxt_vnic_rss_configure_p5(struct bnxt *bp, struct bnxt_vnic_info *vnic)
 
 			/* Find next active ring. */
 			for (cnt = 0; cnt < max_rings; cnt++) {
-				if (rxqs[k]->rx_started)
+				if (rxq_state[k] != RTE_ETH_QUEUE_STATE_STOPPED)
 					break;
 				if (++k == max_rings)
 					k = 0;

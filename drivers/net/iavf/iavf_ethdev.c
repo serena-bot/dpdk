@@ -574,13 +574,14 @@ iavf_init_rxq(struct rte_eth_dev *dev, struct iavf_rx_queue *rxq)
 {
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_eth_dev_data *dev_data = dev->data;
-	uint16_t buf_size, max_pkt_len, len;
+	uint16_t buf_size, max_pkt_len;
 
 	buf_size = rte_pktmbuf_data_room_size(rxq->mp) - RTE_PKTMBUF_HEADROOM;
 
 	/* Calculate the maximum packet length allowed */
-	len = rxq->rx_buf_len * IAVF_MAX_CHAINED_RX_BUFFERS;
-	max_pkt_len = RTE_MIN(len, dev->data->dev_conf.rxmode.max_rx_pkt_len);
+	max_pkt_len = RTE_MIN((uint32_t)
+			rxq->rx_buf_len * IAVF_MAX_CHAINED_RX_BUFFERS,
+			dev->data->dev_conf.rxmode.max_rx_pkt_len);
 
 	/* Check if the jumbo frame and maximum packet length are set
 	 * correctly.
@@ -1485,24 +1486,14 @@ iavf_dev_set_default_mac_addr(struct rte_eth_dev *dev,
 	ret = iavf_add_del_eth_addr(adapter, old_addr, false, VIRTCHNL_ETHER_ADDR_PRIMARY);
 	if (ret)
 		PMD_DRV_LOG(ERR, "Fail to delete old MAC:"
-			    " %02X:%02X:%02X:%02X:%02X:%02X",
-			    old_addr->addr_bytes[0],
-			    old_addr->addr_bytes[1],
-			    old_addr->addr_bytes[2],
-			    old_addr->addr_bytes[3],
-			    old_addr->addr_bytes[4],
-			    old_addr->addr_bytes[5]);
+			    RTE_ETHER_ADDR_PRT_FMT,
+				RTE_ETHER_ADDR_BYTES(old_addr));
 
 	ret = iavf_add_del_eth_addr(adapter, mac_addr, true, VIRTCHNL_ETHER_ADDR_PRIMARY);
 	if (ret)
 		PMD_DRV_LOG(ERR, "Fail to add new MAC:"
-			    " %02X:%02X:%02X:%02X:%02X:%02X",
-			    mac_addr->addr_bytes[0],
-			    mac_addr->addr_bytes[1],
-			    mac_addr->addr_bytes[2],
-			    mac_addr->addr_bytes[3],
-			    mac_addr->addr_bytes[4],
-			    mac_addr->addr_bytes[5]);
+			    RTE_ETHER_ADDR_PRT_FMT,
+				RTE_ETHER_ADDR_BYTES(mac_addr));
 
 	if (ret)
 		return -EIO;
@@ -2185,6 +2176,30 @@ err:
 	return -1;
 }
 
+static void
+iavf_uninit_vf(struct rte_eth_dev *dev)
+{
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+
+	iavf_shutdown_adminq(hw);
+
+	rte_free(vf->vf_res);
+	vf->vsi_res = NULL;
+	vf->vf_res = NULL;
+
+	rte_free(vf->aq_resp);
+	vf->aq_resp = NULL;
+
+	rte_free(vf->qos_cap);
+	vf->qos_cap = NULL;
+
+	rte_free(vf->rss_lut);
+	vf->rss_lut = NULL;
+	rte_free(vf->rss_key);
+	vf->rss_key = NULL;
+}
+
 /* Enable default admin queue interrupt setting */
 static inline void
 iavf_enable_irq0(struct iavf_hw *hw)
@@ -2313,7 +2328,8 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to"
 			     " store MAC addresses",
 			     RTE_ETHER_ADDR_LEN * IAVF_NUM_MACADDR_MAX);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto init_vf_err;
 	}
 	/* If the MAC address is not configured by host,
 	 * generate a random one.
@@ -2338,12 +2354,21 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	ret = iavf_flow_init(adapter);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "Failed to initialize flow");
-		return ret;
+		goto flow_init_err;
 	}
 
 	iavf_default_rss_disable(adapter);
 
 	return 0;
+
+flow_init_err:
+	rte_free(eth_dev->data->mac_addrs);
+	eth_dev->data->mac_addrs = NULL;
+
+init_vf_err:
+	iavf_uninit_vf(eth_dev);
+
+	return ret;
 }
 
 static int

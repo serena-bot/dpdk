@@ -26,13 +26,8 @@ void
 rte_ether_format_addr(char *buf, uint16_t size,
 		      const struct rte_ether_addr *eth_addr)
 {
-	snprintf(buf, size, "%02X:%02X:%02X:%02X:%02X:%02X",
-		 eth_addr->addr_bytes[0],
-		 eth_addr->addr_bytes[1],
-		 eth_addr->addr_bytes[2],
-		 eth_addr->addr_bytes[3],
-		 eth_addr->addr_bytes[4],
-		 eth_addr->addr_bytes[5]);
+	snprintf(buf, size, RTE_ETHER_ADDR_PRT_FMT,
+		RTE_ETHER_ADDR_BYTES(eth_addr));
 }
 
 static int8_t get_xdigit(char ch)

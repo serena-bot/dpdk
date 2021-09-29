@@ -1894,9 +1894,6 @@ uint16_t rte_eth_find_next(uint16_t port_id);
 	RTE_ETH_FOREACH_DEV_OWNED_BY(p, RTE_ETH_DEV_NO_OWNER)
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterates over ethdev ports of a specified device.
  *
  * @param port_id_start
@@ -1907,7 +1904,6 @@ uint16_t rte_eth_find_next(uint16_t port_id);
  *   Next port id of the device, possibly port_id_start,
  *   RTE_MAX_ETHPORTS if there is none.
  */
-__rte_experimental
 uint16_t
 rte_eth_find_next_of(uint16_t port_id_start,
 		const struct rte_device *parent);
@@ -1926,9 +1922,6 @@ rte_eth_find_next_of(uint16_t port_id_start,
 		port_id = rte_eth_find_next_of(port_id + 1, parent))
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Iterates over sibling ethdev ports (i.e. sharing the same rte_device).
  *
  * @param port_id_start
@@ -1939,7 +1932,6 @@ rte_eth_find_next_of(uint16_t port_id_start,
  *   Next sibling port id, possibly port_id_start or ref_port_id itself,
  *   RTE_MAX_ETHPORTS if there is none.
  */
-__rte_experimental
 uint16_t
 rte_eth_find_next_sibling(uint16_t port_id_start, uint16_t ref_port_id);
 
@@ -2190,7 +2182,7 @@ rte_eth_dev_is_removed(uint16_t port_id);
  *   The configuration structure also contains the pointer to the array
  *   of the receiving buffer segment descriptions, see rx_seg and rx_nseg
  *   fields, this extended configuration might be used by split offloads like
- *   RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT. If mp_pool is not NULL,
+ *   RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT. If mb_pool is not NULL,
  *   the extended configuration fields must be set to NULL and zero.
  * @param mb_pool
  *   The pointer to the memory pool from which to allocate *rte_mbuf* network
@@ -3123,9 +3115,6 @@ int rte_eth_dev_fw_version_get(uint16_t port_id,
 int rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
 				     uint32_t *ptypes, int num);
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Inform Ethernet device about reduced range of packet types to handle.
  *
  * Application can use this function to set only specific ptypes that it's
@@ -3155,7 +3144,6 @@ int rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
  *   - (-EINVAL) if *ptype_mask* is invalid (or) set_ptypes is NULL and
  *     num > 0.
  */
-__rte_experimental
 int rte_eth_dev_set_ptypes(uint16_t port_id, uint32_t ptype_mask,
 			   uint32_t *set_ptypes, unsigned int num);
 
@@ -3647,9 +3635,6 @@ int rte_eth_dev_rx_intr_ctl_q(uint16_t port_id, uint16_t queue_id,
 			      int epfd, int op, void *data);
 
 /**
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice.
- *
  * Get interrupt fd per Rx queue.
  *
  * @param port_id
@@ -3663,7 +3648,6 @@ int rte_eth_dev_rx_intr_ctl_q(uint16_t port_id, uint16_t queue_id,
  *           successful.
  *   - (-1) on error.
  */
-__rte_experimental
 int
 rte_eth_dev_rx_intr_ctl_q_get_fd(uint16_t port_id, uint16_t queue_id);
 
@@ -4361,7 +4345,6 @@ int rte_eth_tx_queue_info_get(uint16_t port_id, uint16_t queue_id,
  *   - -ENOTSUP: routine is not supported by the device PMD.
  *   - -EINVAL:  The queue_id is out of range.
  */
-__rte_experimental
 int rte_eth_rx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_burst_mode *mode);
 
@@ -4383,7 +4366,6 @@ int rte_eth_rx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
  *   - -ENOTSUP: routine is not supported by the device PMD.
  *   - -EINVAL:  The queue_id is out of range.
  */
-__rte_experimental
 int rte_eth_tx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_burst_mode *mode);
 

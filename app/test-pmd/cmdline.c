@@ -5491,6 +5491,12 @@ cmd_set_flush_rx_parsed(void *parsed_result,
 		__rte_unused void *data)
 {
 	struct cmd_set_flush_rx *res = parsed_result;
+
+	if (num_procs > 1 && (strcmp(res->mode, "on") == 0)) {
+		printf("multi-process doesn't support to flush Rx queues.\n");
+		return;
+	}
+
 	no_flush_rx = (uint8_t)((strcmp(res->mode, "on") == 0) ? 0 : 1);
 }
 
@@ -10899,10 +10905,8 @@ static void cmd_mcast_addr_parsed(void *parsed_result,
 
 	if (!rte_is_multicast_ether_addr(&res->mc_addr)) {
 		fprintf(stderr,
-			"Invalid multicast addr %02X:%02X:%02X:%02X:%02X:%02X\n",
-			res->mc_addr.addr_bytes[0], res->mc_addr.addr_bytes[1],
-			res->mc_addr.addr_bytes[2], res->mc_addr.addr_bytes[3],
-			res->mc_addr.addr_bytes[4], res->mc_addr.addr_bytes[5]);
+			"Invalid multicast addr " RTE_ETHER_ADDR_PRT_FMT "\n",
+			RTE_ETHER_ADDR_BYTES(&res->mc_addr));
 		return;
 	}
 	if (strcmp(res->what, "add") == 0)

@@ -17,6 +17,10 @@ Deprecation Notices
 * eal: The function ``rte_eal_remote_launch`` will return new error codes
   after read or write error on the pipe, instead of calling ``rte_panic``.
 
+* eal: The lcore state ``FINISHED`` will be removed from
+  the ``enum rte_lcore_state_t``.
+  The lcore state ``WAIT`` is enough to represent the same state.
+
 * eal: Making ``struct rte_intr_handle`` internal to avoid any ABI breakages
   in future.
 
@@ -113,9 +117,27 @@ Deprecation Notices
   as deprecated in DPDK 20.11, along with the associated macros ``ETH_MIRROR_*``.
   This API will be fully removed in DPDK 21.11.
 
+* ethdev: Announce moving from dedicated modify function for each field,
+  to using the general ``rte_flow_modify_field`` action.
+
+* ethdev: The struct ``rte_flow_action_modify_data`` will be modified
+  to support modifying fields larger than 64 bits.
+  In addition, documentation will be updated to clarify byte order.
+
 * ethdev: Attribute ``shared`` of the ``struct rte_flow_action_count``
   is deprecated and will be removed in DPDK 21.11. Shared counters should
   be managed using shared actions API (``rte_flow_shared_action_create`` etc).
+
+* ethdev: Definition of the flow API action ``RTE_FLOW_ACTION_TYPE_PORT_ID``
+  is ambiguous and needs clarification.
+  Structure ``rte_flow_action_port_id`` will be extended to specify
+  traffic direction to the represented entity or ethdev port itself
+  in DPDK 21.11.
+
+* ethdev: Flow API documentation is unclear if ethdev port used to create
+  a flow rule adds any implicit match criteria in the case of transfer rules.
+  The semantics will be clarified in DPDK 21.11 and it will require fixes in
+  drivers and applications which interpret it in a different way.
 
 * ethdev: The flow API matching pattern structures, ``struct rte_flow_item_*``,
   should start with relevant protocol header.
@@ -126,6 +148,9 @@ Deprecation Notices
   will be added as union, target is switch usage to the protocol header by time.
   In v21.11 LTS, protocol header fields will be cleaned and only protocol header
   struct will remain.
+
+* ethdev: Add new Rx queue offload flag ``RTE_ETH_RX_OFFLOAD_SHARED_RXQ`` and
+  ``shared_group`` field to ``struct rte_eth_rxconf``.
 
 * ethdev: Queue specific stats fields will be removed from ``struct rte_eth_stats``.
   Mentioned fields are: ``q_ipackets``, ``q_opackets``, ``q_ibytes``, ``q_obytes``,
@@ -156,6 +181,21 @@ Deprecation Notices
   The second union is for existing ``fragment_offset``
   and new bitfield for fragment flags and offset.
 
+* vhost: ``rte_vdpa_register_device``, ``rte_vdpa_unregister_device``,
+  ``rte_vhost_host_notifier_ctrl`` and ``rte_vdpa_relay_vring_used`` vDPA
+  driver interface will be marked as internal in DPDK v21.11.
+
+* vhost: rename ``struct vhost_device_ops`` to ``struct rte_vhost_device_ops``
+  in DPDK v21.11.
+
+* vhost: The experimental tags of ``rte_vhost_driver_get_protocol_features``,
+  ``rte_vhost_driver_get_queue_num``, ``rte_vhost_crypto_create``,
+  ``rte_vhost_crypto_free``, ``rte_vhost_crypto_fetch_requests``,
+  ``rte_vhost_crypto_finalize_requests``, ``rte_vhost_crypto_set_zero_copy``,
+  ``rte_vhost_va_from_guest_pa``, ``rte_vhost_extern_callback_register``,
+  and ``rte_vhost_driver_set_protocol_features`` functions will be removed
+  and the API functions will be made stable in DPDK 21.11.
+
 * compressdev: ``min`` and ``max`` fields of ``rte_param_log2_range`` structure
   will be renamed in DPDK 21.11 to avoid conflict with Windows Sockets headers.
 
@@ -166,8 +206,37 @@ Deprecation Notices
   has a limited size ``uint16_t``.
   It will be moved and extended as ``uint32_t`` in DPDK 21.11.
 
-* cryptodev: The interface between library and drivers will be marked
-  as internal in DPDK 21.11.
+* cryptodev: The structure ``rte_crypto_sym_vec`` would be updated to add
+  ``dest_sgl`` to support out of place processing.
+  This field will be null for inplace processing.
+  This change is targeted for DPDK 21.11.
+
+* cryptodev: The structure ``rte_crypto_vec`` would be updated to add
+  ``tot_len`` to support total buffer length.
+  This is required for security cases like IPsec and PDCP encryption offload
+  to know how much additional memory space is available in buffer other than
+  data length so that driver/HW can write expanded size data after encryption.
+  This change is targeted for DPDK 21.11.
+
+* cryptodev: Hide structures ``rte_cryptodev_sym_session`` and
+  ``rte_cryptodev_asym_session`` to remove unnecessary indirection between
+  session and the private data of session. An opaque pointer can be exposed
+  directly to application which can be attached to the ``rte_crypto_op``.
+
+* security: Hide structure ``rte_security_session`` and expose an opaque
+  pointer for the private data to the application which can be attached
+  to the packet while enqueuing.
+
+* security: The structure ``rte_security_ipsec_xform`` will be extended with
+  multiple fields: source and destination port of UDP encapsulation,
+  IPsec payload MSS (Maximum Segment Size), and ESN (Extended Sequence Number).
+
+* security: The IPsec SA config options ``struct rte_security_ipsec_sa_options``
+  will be updated with new fields to support new features like IPsec inner
+  checksum, TSO in case of protocol offload.
+
+* ipsec: The structure ``rte_ipsec_sa_prm`` will be extended with a new field
+  ``hdr_l3_len`` to configure tunnel L3 header length.
 
 * eventdev: The file ``rte_eventdev_pmd.h`` will be renamed to ``eventdev_driver.h``
   to make the driver interface as internal and the structures ``rte_eventdev_data``,
@@ -189,18 +258,15 @@ Deprecation Notices
   values to the function ``rte_event_eth_rx_adapter_queue_add`` using
   the structure ``rte_event_eth_rx_adapter_queue_add``.
 
+* eventdev: Reserved bytes of ``rte_event_crypto_request`` is a space holder
+  for ``response_info``. Both should be decoupled for better clarity.
+  New space for ``response_info`` can be made by changing
+  ``rte_event_crypto_metadata`` type to structure from union.
+  This change is targeted for DPDK 21.11.
+
 * metrics: The function ``rte_metrics_init`` will have a non-void return
   in order to notify errors instead of calling ``rte_exit``.
 
 * cmdline: ``cmdline`` structure will be made opaque to hide platform-specific
   content. On Linux and FreeBSD, supported prior to DPDK 20.11,
   original structure will be kept until DPDK 21.11.
-
-* security: The functions ``rte_security_set_pkt_metadata`` and
-  ``rte_security_get_userdata`` will be made inline functions and additional
-  flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
-
-* cryptodev: The structure ``rte_crypto_op`` would be updated to reduce
-  reserved bytes to 2 (from 3), and use 1 byte to indicate warnings and other
-  information from the crypto/security operation. This field will be used to
-  communicate events such as soft expiry with IPsec in lookaside mode.

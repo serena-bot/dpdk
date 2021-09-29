@@ -482,6 +482,12 @@ static int bnxt_setup_one_vnic(struct bnxt *bp, uint16_t vnic_id)
 			rxq->vnic->fw_grp_ids[j] = INVALID_HW_RING_ID;
 		else
 			vnic->rx_queue_cnt++;
+
+		if (!rxq->rx_deferred_start) {
+			bp->eth_dev->data->rx_queue_state[j] =
+				RTE_ETH_QUEUE_STATE_STARTED;
+			rxq->rx_started = true;
+		}
 	}
 
 	PMD_DRV_LOG(DEBUG, "vnic->rx_queue_cnt = %d\n", vnic->rx_queue_cnt);
@@ -981,9 +987,13 @@ static int bnxt_dev_info_get_op(struct rte_eth_dev *eth_dev,
 	dev_info->rx_offload_capa = BNXT_DEV_RX_OFFLOAD_SUPPORT;
 	if (bp->flags & BNXT_FLAG_PTP_SUPPORTED)
 		dev_info->rx_offload_capa |= DEV_RX_OFFLOAD_TIMESTAMP;
+	if (bp->vnic_cap_flags & BNXT_VNIC_CAP_VLAN_RX_STRIP)
+		dev_info->rx_offload_capa |= DEV_RX_OFFLOAD_VLAN_STRIP;
 	dev_info->tx_queue_offload_capa = DEV_TX_OFFLOAD_MBUF_FAST_FREE;
 	dev_info->tx_offload_capa = BNXT_DEV_TX_OFFLOAD_SUPPORT |
 				    dev_info->tx_queue_offload_capa;
+	if (bp->fw_cap & BNXT_FW_CAP_VLAN_TX_INSERT)
+		dev_info->tx_offload_capa |= DEV_TX_OFFLOAD_VLAN_INSERT;
 	dev_info->flow_type_rss_offloads = BNXT_ETH_RSS_SUPPORT;
 
 	dev_info->speed_capa = bnxt_get_speed_capabilities(bp);
@@ -4992,7 +5002,7 @@ static int bnxt_setup_mac_addr(struct rte_eth_dev *eth_dev)
 		PMD_DRV_LOG(INFO, "VF MAC address not assigned by Host PF\n");
 		bnxt_eth_hw_addr_random(bp->mac_addr);
 		PMD_DRV_LOG(INFO,
-			    "Assign random MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
+			    "Assign random MAC:" RTE_ETHER_ADDR_PRT_FMT "\n",
 			    bp->mac_addr[0], bp->mac_addr[1], bp->mac_addr[2],
 			    bp->mac_addr[3], bp->mac_addr[4], bp->mac_addr[5]);
 

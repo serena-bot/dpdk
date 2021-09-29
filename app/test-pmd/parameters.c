@@ -143,6 +143,7 @@ usage(char* progname)
 	       "N.\n");
 	printf("  --burst=N: set the number of packets per burst to N.\n");
 	printf("  --flowgen-clones=N: set the number of single packet clones to send in flowgen mode. Should be less than burst value.\n");
+	printf("  --flowgen-flows=N: set the number of flows in flowgen mode to N (1 <= N <= INT32_MAX).\n");
 	printf("  --mbcache=N: set the cache of mbuf memory pool to N.\n");
 	printf("  --rxpt=N: set prefetch threshold register of RX rings to N.\n");
 	printf("  --rxht=N: set the host threshold register of RX rings to N.\n");
@@ -512,6 +513,9 @@ parse_link_speed(int n)
 void
 launch_args_parse(int argc, char** argv)
 {
+#define PARAM_PROC_ID "proc-id"
+#define PARAM_NUM_PROCS "num-procs"
+
 	int n, opt;
 	char **argvopt;
 	int opt_idx;
@@ -586,6 +590,7 @@ launch_args_parse(int argc, char** argv)
 		{ "hairpin-mode",		1, 0, 0 },
 		{ "burst",			1, 0, 0 },
 		{ "flowgen-clones",		1, 0, 0 },
+		{ "flowgen-flows",		1, 0, 0 },
 		{ "mbcache",			1, 0, 0 },
 		{ "txpt",			1, 0, 0 },
 		{ "txht",			1, 0, 0 },
@@ -631,6 +636,8 @@ launch_args_parse(int argc, char** argv)
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
 		{ "record-burst-stats",         0, 0, 0 },
+		{ PARAM_NUM_PROCS,              1, 0, 0 },
+		{ PARAM_PROC_ID,                1, 0, 0 },
 		{ 0, 0, 0, 0 },
 	};
 
@@ -1122,6 +1129,14 @@ launch_args_parse(int argc, char** argv)
 					rte_exit(EXIT_FAILURE,
 						 "clones must be >= 0 and <= current burst\n");
 			}
+			if (!strcmp(lgopts[opt_idx].name, "flowgen-flows")) {
+				n = atoi(optarg);
+				if (n > 0)
+					nb_flows_flowgen = (int) n;
+				else
+					rte_exit(EXIT_FAILURE,
+						 "flows must be >= 1\n");
+			}
 			if (!strcmp(lgopts[opt_idx].name, "mbcache")) {
 				n = atoi(optarg);
 				if ((n >= 0) &&
@@ -1397,6 +1412,10 @@ launch_args_parse(int argc, char** argv)
 				record_core_cycles = 1;
 			if (!strcmp(lgopts[opt_idx].name, "record-burst-stats"))
 				record_burst_stats = 1;
+			if (!strcmp(lgopts[opt_idx].name, PARAM_NUM_PROCS))
+				num_procs = atoi(optarg);
+			if (!strcmp(lgopts[opt_idx].name, PARAM_PROC_ID))
+				proc_id = atoi(optarg);
 			break;
 		case 'h':
 			usage(argv[0]);

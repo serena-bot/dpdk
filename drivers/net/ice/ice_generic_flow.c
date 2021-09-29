@@ -2134,11 +2134,15 @@ static struct ice_ptype_match ice_ptype_map[] = {
 	{pattern_eth_arp,				ICE_PTYPE_MAC_PAY},
 	{pattern_eth_vlan_ipv4,				ICE_PTYPE_IPV4_PAY},
 	{pattern_eth_qinq_ipv4,				ICE_PTYPE_IPV4_PAY},
+	{pattern_eth_qinq_ipv4_udp,			ICE_PTYPE_IPV4_UDP_PAY},
+	{pattern_eth_qinq_ipv4_tcp,			ICE_PTYPE_IPV4_TCP_PAY},
 	{pattern_eth_vlan_ipv4_udp,			ICE_PTYPE_IPV4_UDP_PAY},
 	{pattern_eth_vlan_ipv4_tcp,			ICE_PTYPE_IPV4_TCP_PAY},
 	{pattern_eth_vlan_ipv4_sctp,			ICE_PTYPE_IPV4_SCTP_PAY},
 	{pattern_eth_vlan_ipv6,				ICE_PTYPE_IPV6_PAY},
 	{pattern_eth_qinq_ipv6,				ICE_PTYPE_IPV6_PAY},
+	{pattern_eth_qinq_ipv6_udp,			ICE_PTYPE_IPV6_UDP_PAY},
+	{pattern_eth_qinq_ipv6_tcp,			ICE_PTYPE_IPV6_TCP_PAY},
 	{pattern_eth_vlan_ipv6_udp,			ICE_PTYPE_IPV6_UDP_PAY},
 	{pattern_eth_vlan_ipv6_tcp,			ICE_PTYPE_IPV6_TCP_PAY},
 	{pattern_eth_vlan_ipv6_sctp,			ICE_PTYPE_IPV6_SCTP_PAY},
@@ -2518,15 +2522,16 @@ ice_flow_query(struct rte_eth_dev *dev,
 			ret = flow->engine->query_count(ad, flow, count, error);
 			break;
 		default:
-			return rte_flow_error_set(error, ENOTSUP,
+			ret = rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION,
 					actions,
 					"action not supported");
+			goto out;
 		}
 	}
 
+out:
 	rte_spinlock_unlock(&pf->flow_ops_lock);
-
 	return ret;
 }
 
